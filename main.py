@@ -1,32 +1,45 @@
-import sys
-import os
-import cv2
-import time
 import json
+import os
+import sys
+import time
+
+import cv2
+import ultralytics.nn.tasks as _nn_tasks
 from ultralytics import YOLO
 
 # 注册 CBAM 自定义模块到 ultralytics 命名空间
-
 from cbam import CBAM, ChannelAttention, SpatialAttention
-import ultralytics.nn.tasks as _nn_tasks
+
 _nn_tasks.CBAM = CBAM
 _nn_tasks.ChannelAttention = ChannelAttention
 _nn_tasks.SpatialAttention = SpatialAttention
 
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QFont, QImage, QPixmap
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFileDialog, QMessageBox, QLineEdit, QComboBox,
-    QDialog, QDialogButtonBox, QFormLayout, QGroupBox
+    QApplication,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QImage, QPixmap, QFont
 
 # ✅ 导入你提供的邮件发送函数
 from message import mailToMeWithImage
 
 
 class EmailSettingsDialog(QDialog):
-    """邮件配置对话框：填写发件人、收件人和授权码"""
+    """邮件配置对话框：填写发件人、收件人和授权码."""
 
     def __init__(self, cfg: dict, parent=None):
         super().__init__(parent)
@@ -39,15 +52,15 @@ class EmailSettingsDialog(QDialog):
         form = QFormLayout(group)
         form.setSpacing(10)
 
-        self.edit_sender = QLineEdit(cfg.get('sender', ''))
+        self.edit_sender = QLineEdit(cfg.get("sender", ""))
         self.edit_sender.setPlaceholderText("例：yourname@163.com")
         form.addRow("发件人（163邮箱）：", self.edit_sender)
 
-        self.edit_receiver = QLineEdit(cfg.get('receiver', ''))
+        self.edit_receiver = QLineEdit(cfg.get("receiver", ""))
         self.edit_receiver.setPlaceholderText("例：someone@qq.com 或手机邮箱")
         form.addRow("收件人邮箱：", self.edit_receiver)
 
-        self.edit_password = QLineEdit(cfg.get('password', ''))
+        self.edit_password = QLineEdit(cfg.get("password", ""))
         self.edit_password.setPlaceholderText("163邮箱客户端授权码，非登录密码")
         self.edit_password.setEchoMode(QLineEdit.Password)
         form.addRow("163客户端授权码：", self.edit_password)
@@ -66,15 +79,17 @@ class EmailSettingsDialog(QDialog):
         layout.addWidget(btn_box)
 
     def _on_accept(self):
-        if not self.edit_sender.text().strip() or \
-           not self.edit_receiver.text().strip() or \
-           not self.edit_password.text().strip():
+        if (
+            not self.edit_sender.text().strip()
+            or not self.edit_receiver.text().strip()
+            or not self.edit_password.text().strip()
+        ):
             QMessageBox.warning(self, "信息不完整", "请填写全部三项信息后再保存！")
             return
         self.accept()
 
     def _on_test_send(self):
-        sender   = self.edit_sender.text().strip()
+        sender = self.edit_sender.text().strip()
         receiver = self.edit_receiver.text().strip()
         password = self.edit_password.text().strip()
         if not sender or not receiver or not password:
@@ -84,11 +99,10 @@ class EmailSettingsDialog(QDialog):
         self.btn_test.setText("发送中...")
         try:
             import numpy as np
+
             dummy_img = np.zeros((100, 300, 3), dtype=np.uint8)
             mailToMeWithImage(
-                "测试邮件",
-                "这是一封来自火灾检测系统的测试邮件，配置正常。",
-                dummy_img, sender, receiver, password
+                "测试邮件", "这是一封来自火灾检测系统的测试邮件，配置正常。", dummy_img, sender, receiver, password
             )
             QMessageBox.information(self, "测试成功", "测试邮件已发送，请检查收件箱！")
         except Exception as e:
@@ -99,9 +113,9 @@ class EmailSettingsDialog(QDialog):
 
     def get_config(self) -> dict:
         return {
-            'sender':   self.edit_sender.text().strip(),
-            'receiver': self.edit_receiver.text().strip(),
-            'password': self.edit_password.text().strip(),
+            "sender": self.edit_sender.text().strip(),
+            "receiver": self.edit_receiver.text().strip(),
+            "password": self.edit_password.text().strip(),
         }
 
 
@@ -110,34 +124,34 @@ class YOLOv8DetectionApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("YOLOv8 实时目标检测系统（带邮件告警）")
         self.setGeometry(100, 100, 1200, 700)
-        
+
         # ======================
         # 模型与路径初始化
         # ======================
         # 兼容 PyInstaller 打包：frozen 模式下从临时解压目录找模型，否则从脚本目录找
-        if getattr(sys, 'frozen', False):
+        if getattr(sys, "frozen", False):
             _base = sys._MEIPASS
         else:
             _base = os.path.dirname(os.path.abspath(__file__))
-        self.model_path = os.path.join(_base, 'best.pt')
+        self.model_path = os.path.join(_base, "best.pt")
         self.current_file = ""
         self.model = None
-        
+
         # 检测参数
         self.conf_threshold = 0.7
         self.iou_threshold = 0.5
-        
+
         # 告警控制
         self.alert_delay_seconds = 20
         self.last_alert_time = 0
 
         # 邮件配置（从 email_config.json 加载，不存在则初始化为空）
         # 打包后写到 exe 所在目录（可写），开发时写到脚本目录
-        if getattr(sys, 'frozen', False):
+        if getattr(sys, "frozen", False):
             _cfg_dir = os.path.dirname(sys.executable)
         else:
             _cfg_dir = os.path.dirname(os.path.abspath(__file__))
-        self.config_path = os.path.join(_cfg_dir, 'email_config.json')
+        self.config_path = os.path.join(_cfg_dir, "email_config.json")
         self.email_cfg = self.load_email_config()
 
         # 摄像头状态（枚举在 init_ui 之前完成，供下拉框填充使用）
@@ -145,10 +159,10 @@ class YOLOv8DetectionApp(QMainWindow):
         self.current_camera_index = None
 
         # 本地检测模式状态
-        self.local_mode = False          # 是否处于本地文件检测模式
-        self.local_file = ""             # 当前选中的本地文件路径
-        self.local_output_path = ""      # 输出文件路径
-        self.video_writer = None         # cv2.VideoWriter（视频模式专用）
+        self.local_mode = False  # 是否处于本地文件检测模式
+        self.local_file = ""  # 当前选中的本地文件路径
+        self.local_output_path = ""  # 输出文件路径
+        self.video_writer = None  # cv2.VideoWriter（视频模式专用）
 
         # 初始化UI
         self.init_ui()
@@ -330,11 +344,11 @@ class YOLOv8DetectionApp(QMainWindow):
                 QMessageBox.warning(self, "错误", f"模型文件不存在: {self.model_path}")
                 self.model = None
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"加载模型失败: {str(e)}")
+            QMessageBox.critical(self, "错误", f"加载模型失败: {e!s}")
             self.model = None
 
     def enumerate_cameras(self, max_test=5):
-        """扫描索引 0~max_test-1，返回实际可用的摄像头索引列表"""
+        """扫描索引 0~max_test-1，返回实际可用的摄像头索引列表."""
         available = []
         for i in range(max_test):
             cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
@@ -344,7 +358,7 @@ class YOLOv8DetectionApp(QMainWindow):
         return available
 
     def _refresh_combo(self):
-        """用 available_cameras 重新填充下拉框"""
+        """用 available_cameras 重新填充下拉框."""
         self.cam_combo.clear()
         for idx in self.available_cameras:
             label = f"摄像头 {idx}（{'内置' if idx == 0 else 'USB'}）"
@@ -352,7 +366,7 @@ class YOLOv8DetectionApp(QMainWindow):
         self.cam_combo.addItem("关闭摄像头", userData=-1)
 
     def switch_camera(self, camera_index):
-        """切换到指定摄像头；camera_index=-1 表示关闭摄像头"""
+        """切换到指定摄像头；camera_index=-1 表示关闭摄像头."""
         # 若处于本地检测模式，先清理资源
         if self.local_mode:
             self.local_mode = False
@@ -390,14 +404,14 @@ class YOLOv8DetectionApp(QMainWindow):
         print(f"✅ 已切换到摄像头 {camera_index}")
 
     def on_switch_camera(self):
-        """「切换摄像头」按钮回调"""
+        """「切换摄像头」按钮回调."""
         camera_index = self.cam_combo.currentData()
         if camera_index is None:
             return
         self.switch_camera(camera_index)
 
     def on_refresh_cameras(self):
-        """「刷新列表」按钮回调：重新枚举并更新下拉框"""
+        """「刷新列表」按钮回调：重新枚举并更新下拉框."""
         self.available_cameras = self.enumerate_cameras()
         self._refresh_combo()
         count = len(self.available_cameras)
@@ -443,27 +457,33 @@ class YOLOv8DetectionApp(QMainWindow):
         if not self.local_mode and high_conf_target_exists:
             current_time = time.time()
             if current_time - self.last_alert_time >= self.alert_delay_seconds:
-                sender   = self.email_cfg.get('sender', '')
-                receiver = self.email_cfg.get('receiver', '')
-                password = self.email_cfg.get('password', '')
+                sender = self.email_cfg.get("sender", "")
+                receiver = self.email_cfg.get("receiver", "")
+                password = self.email_cfg.get("password", "")
                 if not sender or not receiver or not password:
                     print("⚠️ 邮件未配置，跳过告警。请点击「邮件设置」完成配置。")
                 else:
                     print("🔥 检测到高置信目标，发送告警邮件...")
                     import threading
-                    conf_to_send  = alert_conf
+
+                    conf_to_send = alert_conf
                     frame_to_send = annotated_frame.copy()
                     self.last_alert_time = time.time()  # 立即更新，防止并发重复触发
+
                     def send_alert():
                         try:
                             mailToMeWithImage(
                                 "火灾告警",
                                 f"警告：摄像头检测到高置信度可疑目标，当前置信度为 {conf_to_send * 100:.2f}%，可能存在风险，请查看附件！",
-                                frame_to_send, sender, receiver, password
+                                frame_to_send,
+                                sender,
+                                receiver,
+                                password,
                             )
                             print("✅ 告警邮件发送成功！")
                         except Exception as e:
                             print(f"❌ 邮件发送失败: {e}")
+
                     threading.Thread(target=send_alert, daemon=True).start()
 
         # -------------------------------
@@ -489,9 +509,9 @@ class YOLOv8DetectionApp(QMainWindow):
             cls = int(box.cls[0])
             conf = float(box.conf[0])
             x1, y1, x2, y2 = map(int, box.xyxy[0])
-            label = self.model.names[cls] if cls in self.model.names else f"Class_{cls}"
+            label = self.model.names.get(cls, f"Class_{cls}")
 
-            self.lbl_target_count.setText(f"目标数目：1")
+            self.lbl_target_count.setText("目标数目：1")
             self.lbl_target_type.setText(f"类型：{label}")
             self.lbl_confidence.setText(f"置信度：{conf * 100:.2f}%")
             self.lbl_location.setText(f"位置：xmin={x1}, ymin={y1}, xmax={x2}, ymax={y2}")
@@ -519,12 +539,9 @@ class YOLOv8DetectionApp(QMainWindow):
     # ============================================================
 
     def on_select_local_file(self):
-        """弹出文件选择框，让用户选择本地视频或图片"""
+        """弹出文件选择框，让用户选择本地视频或图片."""
         path, _ = QFileDialog.getOpenFileName(
-            self,
-            "请选择待检测的本地文件",
-            "",
-            "视频/图片文件 (*.mp4 *.avi *.mov *.mkv *.wmv *.jpg *.jpeg *.png *.bmp)"
+            self, "请选择待检测的本地文件", "", "视频/图片文件 (*.mp4 *.avi *.mov *.mkv *.wmv *.jpg *.jpeg *.png *.bmp)"
         )
         if path:
             self.local_file = path
@@ -535,12 +552,12 @@ class YOLOv8DetectionApp(QMainWindow):
             self.lbl_local_status.setStyleSheet("color: blue;")
 
     def on_start_local_detect(self):
-        """「开始测试」按钮回调：按文件类型分发到图片或视频处理"""
+        """「开始测试」按钮回调：按文件类型分发到图片或视频处理."""
         if not self.local_file:
             return
         ext = os.path.splitext(self.local_file)[1].lower()
-        image_exts = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp']
-        video_exts = ['.mp4', '.avi', '.mov', '.mkv', '.wmv']
+        image_exts = [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"]
+        video_exts = [".mp4", ".avi", ".mov", ".mkv", ".wmv"]
         if ext in image_exts:
             self._detect_image(self.local_file)
         elif ext in video_exts:
@@ -549,7 +566,7 @@ class YOLOv8DetectionApp(QMainWindow):
             QMessageBox.warning(self, "格式错误", f"不支持的文件格式：{ext}")
 
     def _detect_image(self, path):
-        """图片一次性检测：推理→保存→显示"""
+        """图片一次性检测：推理→保存→显示."""
         if self.model is None:
             QMessageBox.warning(self, "错误", "模型未加载！")
             return
@@ -583,7 +600,7 @@ class YOLOv8DetectionApp(QMainWindow):
         QMessageBox.information(self, "检测完成", f"结果已保存至：\n{out_path}")
 
     def _detect_video(self, path):
-        """视频检测：复用 cap+timer 机制，逐帧推理并写入输出文件"""
+        """视频检测：复用 cap+timer 机制，逐帧推理并写入输出文件."""
         if self.model is None:
             QMessageBox.warning(self, "错误", "模型未加载！")
             return
@@ -603,15 +620,15 @@ class YOLOv8DetectionApp(QMainWindow):
             return
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 25
-        w   = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        h   = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         out_path = self._get_output_path(path, "vvedio_detect", ".mp4")
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.video_writer    = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        self.video_writer = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
         self.local_output_path = out_path
 
-        self.cap        = cap
+        self.cap = cap
         self.local_mode = True
         self.btn_start_detect.setEnabled(False)
 
@@ -622,7 +639,7 @@ class YOLOv8DetectionApp(QMainWindow):
         self.timer.start(30)
 
     def _finalize_video(self):
-        """视频检测结束时的收尾工作"""
+        """视频检测结束时的收尾工作."""
         self.timer.stop()
         if self.video_writer is not None:
             self.video_writer.release()
@@ -641,7 +658,7 @@ class YOLOv8DetectionApp(QMainWindow):
         QMessageBox.information(self, "检测完成", f"结果已保存至：\n{out_path}")
 
     def _get_output_path(self, src_path, prefix, ext):
-        """生成不冲突的输出文件路径，编号从1开始自动递增"""
+        """生成不冲突的输出文件路径，编号从1开始自动递增."""
         directory = os.path.dirname(os.path.abspath(src_path))
         idx = 1
         while True:
@@ -655,26 +672,26 @@ class YOLOv8DetectionApp(QMainWindow):
     # ============================================================
 
     def load_email_config(self) -> dict:
-        """从 email_config.json 读取邮件配置，文件不存在或解析失败时返回空配置"""
-        empty = {'sender': '', 'receiver': '', 'password': ''}
+        """从 email_config.json 读取邮件配置，文件不存在或解析失败时返回空配置."""
+        empty = {"sender": "", "receiver": "", "password": ""}
         try:
             if os.path.exists(self.config_path):
-                with open(self.config_path, 'r', encoding='utf-8') as f:
+                with open(self.config_path, encoding="utf-8") as f:
                     return json.load(f)
         except Exception as e:
             print(f"读取邮件配置失败: {e}")
         return empty
 
     def save_email_config(self, cfg: dict):
-        """将邮件配置写入 email_config.json"""
+        """将邮件配置写入 email_config.json."""
         try:
-            with open(self.config_path, 'w', encoding='utf-8') as f:
+            with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(cfg, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"保存邮件配置失败: {e}")
 
     def on_email_settings(self):
-        """打开邮件设置对话框"""
+        """打开邮件设置对话框."""
         dlg = EmailSettingsDialog(self.email_cfg, parent=self)
         if dlg.exec_() == QDialog.Accepted:
             self.email_cfg = dlg.get_config()
@@ -683,9 +700,9 @@ class YOLOv8DetectionApp(QMainWindow):
             QMessageBox.information(self, "保存成功", "邮件配置已保存！")
 
     def _refresh_email_status(self):
-        """根据当前 email_cfg 更新右侧状态标签"""
-        sender   = self.email_cfg.get('sender', '')
-        receiver = self.email_cfg.get('receiver', '')
+        """根据当前 email_cfg 更新右侧状态标签."""
+        sender = self.email_cfg.get("sender", "")
+        receiver = self.email_cfg.get("receiver", "")
         if sender and receiver:
             self.lbl_email_status.setText(f"已配置：\n{sender}\n→ {receiver}")
             self.lbl_email_status.setStyleSheet("color: green;")

@@ -3,8 +3,7 @@ train: E:/Desktop/yolo/yolov8/datasets/FireData/train/images
 val: E:/Desktop/yolo/yolov8/datasets/FireData/valid/images
 # test: E:/Desktop/yolo/yolov8/data/images/test  # 如需测试集则取消注释
 
-
 # 数据集配置
 nc: 2
-names: ['fire', 'smoke']
+names: ["fire", "smoke"]
 is_coco: False
