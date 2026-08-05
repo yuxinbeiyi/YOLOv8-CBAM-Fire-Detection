@@ -1,12 +1,19 @@
-
-import sys
 import os
 import random
+import sys
+
 import cv2
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QPushButton, QLabel, QLineEdit,
-    QSpinBox, QCheckBox, QTextEdit, QVBoxLayout, QHBoxLayout,
-    QFileDialog
+    QApplication,
+    QCheckBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 
@@ -77,10 +84,7 @@ class ImageProcessor(QWidget):
         max_angle = self.angle_spin.value()
         enable_flip = self.flip_check.isChecked()
 
-        image_files = sorted([
-            f for f in os.listdir(self.input_dir)
-            if f.lower().endswith((".jpg", ".png", ".jpeg"))
-        ])
+        image_files = sorted([f for f in os.listdir(self.input_dir) if f.lower().endswith((".jpg", ".png", ".jpeg"))])
 
         if len(image_files) == 0:
             self.log("❌ 文件夹中没有图片")
@@ -96,9 +100,7 @@ class ImageProcessor(QWidget):
                 self.log(f"⚠ 无法读取：{filename}")
                 continue
 
-            processed_img = self.augment_image(
-                img, max_angle, enable_flip
-            )
+            processed_img = self.augment_image(img, max_angle, enable_flip)
 
             save_name = f"{idx:03d}.jpg"
             save_path = os.path.join(output_dir, save_name)
@@ -114,12 +116,7 @@ class ImageProcessor(QWidget):
         angle = random.uniform(-max_angle, max_angle)
         center = (w // 2, h // 2)
         rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-        rotated = cv2.warpAffine(
-            img,
-            rot_matrix,
-            (w, h),
-            borderMode=cv2.BORDER_REPLICATE
-        )
+        rotated = cv2.warpAffine(img, rot_matrix, (w, h), borderMode=cv2.BORDER_REPLICATE)
 
         # 随机翻转
         if enable_flip:
