@@ -355,7 +355,7 @@ def build_engine_onnx(model_file):
             print("ERROR: Failed to parse the ONNX file.")
             for error in range(parser.num_errors):
                 print(parser.get_error(error))
-            return None
+            return
     config.set_flag(trt.BuilderFlag.FP16)
     engine_bytes = builder.build_serialized_network(network, config)
     with open(model_file.replace("onnx", "engine"), "wb") as f:
