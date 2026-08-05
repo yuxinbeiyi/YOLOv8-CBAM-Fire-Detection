@@ -186,6 +186,7 @@ email_config.json
 工作进度.txt
 工作记忆.txt
 下载地址.txt
+*.docx
 
 # 历史备份代码（包含多个旧版 email_config.json，绝对不能提交）
 备份代码(正常功能)/
