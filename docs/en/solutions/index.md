@@ -93,7 +93,6 @@ All Solutions calls return a list of `SolutionResults` objects, containing compr
 
     ```python
     import cv2
-
     from ultralytics import solutions
 
     im0 = cv2.imread("path/to/img")
