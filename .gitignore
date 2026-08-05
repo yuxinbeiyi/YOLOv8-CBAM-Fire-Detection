@@ -1,3 +1,4 @@
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -206,3 +207,7 @@ conda
 # 火焰检测系统打包 spec
 FireDetectSystem.spec
 火灾烟雾检测系统.spec
+
+# ultralytics 官方示例和文档（与项目无关）
+examples/
+docs/
