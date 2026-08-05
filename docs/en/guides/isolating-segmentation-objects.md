@@ -103,7 +103,6 @@ After performing the [Segment Task](../tasks/segment.md), it's sometimes desirab
     <details>
     <summary> Expand to understand what is happening when defining the <code>contour</code> variable.</summary>
     <p>
-
     - `c.masks.xy` :: Provides the coordinates of the mask contour points in the format `(x, y)`. For more details, refer to the [Masks Section from Predict Mode](../modes/predict.md#masks).
 
     - `.pop()` :: As `masks.xy` is a list containing a single element, this element is extracted using the `pop()` method.
@@ -117,7 +116,6 @@ After performing the [Segment Task](../tasks/segment.md), it's sometimes desirab
     <details>
     <summary> Expand for an explanation of the <code>drawContours()</code> configuration.</summary>
     <p>
-
     - Encapsulating the `contour` variable within square brackets, `[contour]`, was found to effectively generate the desired contour mask during testing.
 
     - The value `-1` specified for the `drawContours()` parameter instructs the function to draw all contours present in the image.
@@ -264,7 +262,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-
 from ultralytics import YOLO
 
 m = YOLO("yolo11n-seg.pt")  # (4)!
