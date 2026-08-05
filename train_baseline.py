@@ -1,27 +1,28 @@
 """
 纯YOLOv8m基线训练脚本（无CBAM、无自定义损失）
-用于消融实验对照组，超参数与train34保持一致
+用于消融实验对照组，超参数与train34保持一致.
 """
+
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 from ultralytics import YOLO
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # 加载标准YOLOv8m预训练权重（无任何结构改动）
-    model = YOLO('yolov8m.pt')
+    model = YOLO("yolov8m.pt")
 
     # 训练参数与train34完全对齐，确保消融实验公平性
     results = model.train(
-        data='data.yaml',
+        data="data.yaml",
         imgsz=640,
         epochs=200,
         batch=16,
         single_cls=False,
         workers=8,
-        device='0',
+        device="0",
         # 优化器（与train34一致）
-        optimizer='SGD',
+        optimizer="SGD",
         lr0=0.01,
         lrf=0.01,
         momentum=0.937,
@@ -49,7 +50,7 @@ if __name__ == '__main__':
         patience=50,
         pretrained=True,
         # 结果保存到单独目录，便于区分
-        name='train_baseline',
+        name="train_baseline",
     )
 
     print("基线训练完成！")
