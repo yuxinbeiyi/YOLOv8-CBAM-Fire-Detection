@@ -254,7 +254,6 @@ There are 2 methods of using the Raspberry Pi Camera to inference YOLO11 models.
                 ```python
                 import cv2
                 from picamera2 import Picamera2
-
                 from ultralytics import YOLO
 
                 # Initialize the Picamera2
@@ -455,7 +454,6 @@ There are two methods to set up a Raspberry Pi Camera for YOLO11 inference:
     ```python
     import cv2
     from picamera2 import Picamera2
-
     from ultralytics import YOLO
 
     picam2 = Picamera2()
